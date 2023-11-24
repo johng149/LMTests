@@ -177,3 +177,6 @@ pyrightconfig.json
 
 # ignore venv dir
 /lmtest
+
+# ignore .pt files
+*.pt
