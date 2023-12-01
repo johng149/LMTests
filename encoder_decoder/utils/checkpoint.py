@@ -19,7 +19,7 @@ def save_checkpoint(checkpoint_dir, checkpoint_name, model, losses, optm, tensor
         'tensorboard_log_dir': tensorboard_log_dir,
     }, checkpoint_path)
 
-def load_checkpoint(checkpoint_dir, checkpoint_name, model_class, optm_class, device, map_location):
+def load_checkpoint(checkpoint_dir, checkpoint_name, model_class, optm_class, device, map_location=None):
     checkpoint_path = os.path.join(checkpoint_dir, checkpoint_name)
     checkpoint = torch.load(checkpoint_path, map_location=map_location)
     model = model_class(**checkpoint["model_kwargs"])

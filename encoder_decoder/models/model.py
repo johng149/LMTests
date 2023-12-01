@@ -7,7 +7,7 @@ from .cross import FullVisibilityXBlock
 from .phm import phm
 
 class VanillaEncoderDecoder(nn.Module):
-    def __init__(self, embedding_dim, num_heads, num_encoder_layers, num_decoder_layers, vocab_size, factor, lm_head_factor, eos_idx, bos_idx):
+    def __init__(self, embedding_dim, num_heads, num_encoder_layers, num_decoder_layers, vocab_size, factor, lm_head_factor, eos_idx, bos_idx, qc_pad_idx, a_pad_idx):
         super().__init__()
         self.embedding_dim = embedding_dim
         self.num_heads = num_heads
@@ -18,6 +18,8 @@ class VanillaEncoderDecoder(nn.Module):
         self.lm_head_factor = lm_head_factor
         self.eos_idx = eos_idx
         self.bos_idx = bos_idx
+        self.qc_pad_idx = qc_pad_idx
+        self.a_pad_idx = a_pad_idx
         self.kwargs = {
             "embedding_dim": embedding_dim,
             "num_heads": num_heads,
@@ -28,6 +30,8 @@ class VanillaEncoderDecoder(nn.Module):
             "lm_head_factor": lm_head_factor,
             "eos_idx": eos_idx,
             "bos_idx": bos_idx,
+            "qc_pad_idx": qc_pad_idx,
+            "a_pad_idx": a_pad_idx,
         }
 
         self.embedding = StableEmbedding(vocab_size, embedding_dim)
@@ -47,7 +51,7 @@ class VanillaEncoderDecoder(nn.Module):
         batch_size, context_len = context_tokens.shape
         _, answer_len = answer_tokens.shape
 
-        context_attn_mask = (context_tokens != self.eos_idx).float()
+        context_attn_mask = (context_tokens != self.qc_pad_idx).float()
         context_attn_mask.masked_fill_(context_attn_mask.logical_not(), float("-inf"))
         context_attn_mask.masked_fill_(context_attn_mask == 1, 0)
 

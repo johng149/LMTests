@@ -9,17 +9,17 @@ def load_data():
     dolly = load_from_disk(dolly_test_file)
     return squad, dolly
 
-def collate_fn(batch, question_key, context_key, answer_key, qc_len, a_len, eos_idx, bos_idx, padding_function):
+def collate_fn(batch, question_key, context_key, answer_key, qc_len, a_len, eos_idx, bos_idx, pad_idx, a_pad_idx, padding_function):
     """
     Each batch is a list of dictionaries, where each dictionary is a single
     datapoint. Each datapoint has a question, a context, and an answer, and
     each of these is a vector of variable length.
 
-    Padding is done by prepending the bos_idx and appending the eos_idx such
-    that the final length is equal to the maximum length in the batch.
+    Padding is done by prepending the bos_idx and appending the eos_idx and
+    then padding such that final length is equal to the respective specified lengths
 
     If a given vector is already of maximum length or longer, it is truncated
-    to length max_len - 1 and prepended with bos_idx.
+    to length max_len - 1 and prepended with bos_idx and appended with eos_idx.
 
     For question and context, they are concatenated together and padded to the
     qc_len. The answer is padded to a_len.
@@ -32,7 +32,9 @@ def collate_fn(batch, question_key, context_key, answer_key, qc_len, a_len, eos_
     @param a_len: length to pad answer to
     @param eos_idx: index of end of sentence token
     @param bos_idx: index of beginning of sentence token
-    @param padding_function: accepts a tensor, eos_idx, bos_idx, and max_len,
+    @param pad_idx: index of padding token
+    @param a_pad_idx: index of padding token for answers
+    @param padding_function: accepts a tensor, max_len, eos_idx, bos_idx, padding_idx,
         and returns a padded tensor
 
     @return: tuple of tensors (padded question and context, padded answer)
@@ -46,22 +48,22 @@ def collate_fn(batch, question_key, context_key, answer_key, qc_len, a_len, eos_
         ans = elem[answer_key]
 
         qc = torch.cat((question, context))
-        qc = padding_function(qc, eos_idx, bos_idx, qc_len)
+        qc = padding_function(qc, qc_len, eos_idx, bos_idx, pad_idx)
         inputs.append(qc)
 
-        a = padding_function(ans, eos_idx, bos_idx, a_len)
+        a = padding_function(ans, a_len, eos_idx, bos_idx, a_pad_idx)
         answers.append(a)
 
     return torch.stack(inputs), torch.stack(answers)
 
-def dolly_collate_fn(batch, qc_len, a_len, eos_idx, bos_idx, padding_function):
-    return collate_fn(batch, "instruction", "context", "response", qc_len, a_len, eos_idx, bos_idx, padding_function)
+def dolly_collate_fn(batch, qc_len, a_len, eos_idx, bos_idx, pad_idx, a_pad_idx, padding_function):
+    return collate_fn(batch, "instruction", "context", "response", qc_len, a_len, eos_idx, bos_idx, pad_idx, a_pad_idx, padding_function)
 
-def squad_collate_fn(batch, qc_len, a_len, eos_idx, bos_idx, padding_function):
-    return collate_fn(batch, "question", "context", "answers", qc_len, a_len, eos_idx, bos_idx, padding_function)
+def squad_collate_fn(batch, qc_len, a_len, eos_idx, bos_idx, pad_idx, a_pad_idx, padding_function):
+    return collate_fn(batch, "question", "context", "answers", qc_len, a_len, eos_idx, bos_idx, pad_idx, a_pad_idx, padding_function)
 
-def prep_squad_collate_fn(qc_len, a_len, eos_idx, bos_idx, padding_function):
-    return lambda batch: squad_collate_fn(batch, qc_len, a_len, eos_idx, bos_idx, padding_function)
+def prep_squad_collate_fn(qc_len, a_len, eos_idx, bos_idx, pad_idx, a_pad_idx, padding_function):
+    return lambda batch: squad_collate_fn(batch, qc_len, a_len, eos_idx, bos_idx, pad_idx, a_pad_idx,padding_function)
 
-def prep_dolly_collate_fn(qc_len, a_len, eos_idx, bos_idx, padding_function):
-    return lambda batch: dolly_collate_fn(batch, qc_len, a_len, eos_idx, bos_idx, padding_function)
+def prep_dolly_collate_fn(qc_len, a_len, eos_idx, bos_idx, pad_idx, a_pad_idx, padding_function):
+    return lambda batch: dolly_collate_fn(batch, qc_len, a_len, eos_idx, bos_idx, pad_idx, a_pad_idx,padding_function)
