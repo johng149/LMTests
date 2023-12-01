@@ -35,7 +35,7 @@ class DecoderBlock(nn.Module):
         self.norm2 = nn.LayerNorm(embedding_dim)
         self.ffn_activation = nn.GELU()
 
-    def forward(self, x, mask=None):
+    def forward(self, x):
         attn = self.attn(self.norm1(x))
         x = x + attn
         ffn = self.ffn_activation(self.ffn(self.norm2(x)))
