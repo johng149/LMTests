@@ -39,22 +39,38 @@ def collate_fn(batch, question_key, context_key, answer_key, qc_len, a_len, eos_
 
     @return: tuple of tensors (padded question and context, padded answer)
     """
-    inputs = []
-    answers = []
+    inputs = [
+        handleqc(elem, question_key, context_key, qc_len, eos_idx, bos_idx, pad_idx, padding_function) for elem in batch
+    ]
+    answers = [
+        handlea(elem, answer_key, a_len, eos_idx, bos_idx, a_pad_idx, padding_function) for elem in batch
+    ]
 
-    for elem in batch:
-        question = elem[question_key]
-        context = elem[context_key]
-        ans = elem[answer_key]
+    # for elem in batch:
+    #     question = elem[question_key]
+    #     context = elem[context_key]
+    #     ans = elem[answer_key]
 
-        qc = torch.cat((question, context))
-        qc = padding_function(qc, qc_len, eos_idx, bos_idx, pad_idx)
-        inputs.append(qc)
+    #     qc = torch.cat((question, context))
+    #     qc = padding_function(qc, qc_len, eos_idx, bos_idx, pad_idx)
+    #     inputs.append(qc)
 
-        a = padding_function(ans, a_len, eos_idx, bos_idx, a_pad_idx)
-        answers.append(a)
+    #     a = padding_function(ans, a_len, eos_idx, bos_idx, a_pad_idx)
+    #     answers.append(a)
 
     return torch.stack(inputs), torch.stack(answers)
+
+def handleqc(elem, question_key, context_key, qc_len, eos_idx, bos_idx, pad_idx, padding_function):
+    question = elem[question_key]
+    context = elem[context_key]
+    qc = torch.cat((question, context))
+    qc = padding_function(qc, qc_len, eos_idx, bos_idx, pad_idx)
+    return qc
+
+def handlea(elem, answer_key, a_len, eos_idx, bos_idx, a_pad_idx, padding_function):
+    ans = elem[answer_key]
+    a = padding_function(ans, a_len, eos_idx, bos_idx, a_pad_idx)
+    return a
 
 def dolly_collate_fn(batch, qc_len, a_len, eos_idx, bos_idx, pad_idx, a_pad_idx, padding_function):
     return collate_fn(batch, "instruction", "context", "response", qc_len, a_len, eos_idx, bos_idx, pad_idx, a_pad_idx, padding_function)
