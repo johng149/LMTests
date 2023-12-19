@@ -38,10 +38,23 @@ def collate_fn(batch, pad_idx=65000):
     zhs = torch.stack(zhs)
 
     # remove columns that only consist of padding tokens
-    ens = ens[:, (ens != pad_idx).any(dim=0)]
-    zhs = zhs[:, (zhs != pad_idx).any(dim=0)]
-    
+    ens = remove_padding_cols(ens, pad_idx)
+    zhs = remove_padding_cols(zhs, pad_idx)
+
     return ens, zhs
+
+def remove_padding_cols(samples, pad_idx):
+    """
+    Remove columns that only consist of padding tokens.
+
+    Args:
+        samples (torch.Tensor): The input samples.
+        pad_idx (int): The index of the padding token.
+
+    Returns:
+        torch.Tensor: The samples without padding columns.
+    """
+    return samples[:, (samples != pad_idx).any(dim=0)]
 
 def process_data(samples, pad_idx, factor):
     """
@@ -54,16 +67,44 @@ def process_data(samples, pad_idx, factor):
         factor (int): The factor by which the token mask is repeated to create the vertex mask.
 
     Returns:
-        torch.Tensor: The number of tokens per row that are not padding.
-        torch.Tensor: The number of vertices per row that are not padding.
-        torch.Tensor: The token mask.
-        torch.Tensor: The vertex mask.
+        token_lens: The number of tokens per row that are not padding.
+        vertex_lens: The number of vertices per row that are not padding.
+        token_is_pad: Indicates whether a token is padding.
+        vertex_is_pad: Indicates whether a vertex is padding.
     """
     batch_size, l = samples.shape
 
     # count number of tokens per row that are not padding
     token_lens = torch.sum(samples != pad_idx, dim=1)
     vertex_lens = token_lens * factor
-    token_mask = (samples == pad_idx)
-    vertex_mask = token_mask.repeat_interleave(factor, dim=1)
-    return token_lens, vertex_lens, token_mask, vertex_mask
+    token_is_pad = (samples != pad_idx)
+    vertex_is_pad = token_is_pad.repeat_interleave(factor, dim=1)
+    return token_lens, vertex_lens, token_is_pad, vertex_is_pad
+
+def self_attn_mask(is_pad):
+    """
+    Create a self-attention mask for the given samples.
+
+    Args:
+        is_pad (torch.Tensor): Indicates whether a token is padding.
+
+    Returns:
+        torch.Tensor: The self-attention mask.
+    """
+    batch_size, l = is_pad.shape
+    return is_pad.unsqueeze(-1).expand(-1, -1, l).transpose(1, 2)
+
+def cross_attn_mask(is_pad_kv, is_pad_q):
+    """
+    Create a cross-attention mask for the given samples.
+
+    Args:
+        is_pad_kv (torch.Tensor): Indicates whether a token is padding for the key and value.
+        is_pad_q (torch.Tensor): Indicates whether a token is padding for the query.
+
+    Returns:
+        torch.Tensor: The cross-attention mask.
+    """
+    batch_size, l_kv = is_pad_kv.shape
+    _, l_q = is_pad_q.shape
+    return is_pad_kv.unsqueeze(-1).expand(-1, -1, l_q).transpose(1, 2)

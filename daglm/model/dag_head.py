@@ -1,5 +1,6 @@
 import torch
 from torch import nn
+import numpy as np
 from .phm import phm
 
 class OutputDAG(nn.Module):
@@ -21,7 +22,7 @@ class OutputDAG(nn.Module):
 
         # I don't know why it has to be normalized by sqrt(embed_dim)
         # specifically, but that is what the paper says.
-        transition_matrix_norm_factor = torch.sqrt(embed_dim)
+        transition_matrix_norm_factor = np.sqrt(embed_dim)
         transition_matrix = transition_matrix / transition_matrix_norm_factor
         transition_matrix = torch.log_softmax(transition_matrix, dim=-1)
 
