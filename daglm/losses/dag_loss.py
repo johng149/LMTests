@@ -74,6 +74,7 @@ def dag_loss_raw(targets, transition_matrix, emission_probs):
     # also we need to tranpose emission_probs so it is vocab_size x l
     # so the vector gather works
     emission_probs = emission_probs.transpose(1, 2)
+    dp = dp.to(transition_matrix.device)
     for i in range(1, m):
         dp[:, i, :] = vector_gather(emission_probs, targets[:, i]) + (torch.logsumexp(dp[:, i-1, :].unsqueeze(1).transpose(1, 2) + transition_matrix, dim=1))
     return dp
