@@ -49,6 +49,25 @@ def masking(transition_matrix, vertex_lens):
     padding = padding_transition_mask(transition_matrix, vertex_lens)
     return padding + acyclic
 
+def special_masking(transition_matrix, vertex_lens):
+    """
+    Creates masking to the transition matrix based on acyclic and padding masks.
+    However, the diagonal offset by 1 is not masked out
+
+    Args:
+        transition_matrix (torch.Tensor): The transition matrix of shape (batch_size, vertices, vertices).
+        vertex_lens (torch.Tensor): A tensor of shape (batch_size,) that describes the number of non-padding vertices for each batch.
+
+    Returns:
+        torch.Tensor: The masked transition matrix of shape (batch_size, vertices, vertices).
+    """
+    mask = masking(transition_matrix, vertex_lens)
+    _, vertices, _ = transition_matrix.shape
+    special = torch.zeros((vertices, vertices)).to(transition_matrix.device)
+    special.diagonal(offset=1).fill_(1)
+    mask = mask.masked_fill(special == 1, 0)
+    return mask
+
 def fix_probs(logprobs, mask):
     """
     Fixes the probabilities in log space by ensuring that the sum of each row is 100%
