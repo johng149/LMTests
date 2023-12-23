@@ -2,55 +2,6 @@ import torch
 from utils.vector_gather import vector_gather
 from utils.fix_probs import fix_probs
 
-def acyclic_mask(transition_matrix):
-    """
-    Generates a mask that, when applied to the transition matrix, ensures that
-    vertex i can only transition to vertices j where j > i.
-
-    Args:
-        transition_matrix (torch.Tensor): The transition matrix of shape (batch_size, vertices, vertices).
-
-    Returns:
-        torch.Tensor: The acyclic mask of shape (vertices, vertices).
-    """
-    batch_size, vertices, _ = transition_matrix.shape
-    mask = torch.tril(torch.ones((vertices, vertices)))
-    return mask
-
-def padding_transition_mask(transition_matrix, vertex_lens):
-    """
-    Generates a mask that, when applied to the transition matrix, prevents vertices
-    from transitioning to padding vertices. It is assumed that the padding vertices
-    are at the end of the sequence.
-
-    Args:
-        transition_matrix (torch.Tensor): The transition matrix of shape (batch_size, vertices, vertices).
-        vertex_lens (torch.Tensor): A tensor of shape (batch_size,) that describes the number of non-padding vertices for each batch.
-
-    Returns:
-        torch.Tensor: The padding transition mask of shape (batch_size, vertices, vertices).
-    """
-    batch_size, vertices, _ = transition_matrix.shape
-    vertex_lens_mask = torch.arange(vertices).repeat(len(vertex_lens), 1) < vertex_lens.unsqueeze(-1)
-    mask = torch.ones_like(transition_matrix)
-    mask.transpose(1,2)[vertex_lens_mask] = 0
-    return mask
-
-def masking(transition_matrix, vertex_lens):
-    """
-    Creates masking to the transition matrix based on acyclic and padding masks.
-
-    Args:
-        transition_matrix (torch.Tensor): The transition matrix of shape (batch_size, vertices, vertices).
-        vertex_lens (torch.Tensor): A tensor of shape (batch_size,) that describes the number of non-padding vertices for each batch.
-
-    Returns:
-        torch.Tensor: The masked transition matrix of shape (batch_size, vertices, vertices).
-    """
-    acyclic = acyclic_mask(transition_matrix)
-    padding = padding_transition_mask(transition_matrix, vertex_lens)
-    return padding + acyclic
-
 def dag_loss_raw(targets, transition_matrix, emission_probs):
     """
     Calculates the directed acyclic graph (DAG) loss given the targets, transition matrix, and emission probabilities.
