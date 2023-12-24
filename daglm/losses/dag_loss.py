@@ -48,24 +48,6 @@ def process_dp(dp, target_lens, vertex_lens):
     values = torch.gather(dp_values, dim=1, index=(vertex_lens - 1).unsqueeze(-1))
     return values
 
-def transition_loss(transition_matrix, vertex_lens):
-    """
-    Calculates the transition loss based on the given transition matrix and vertex lengths.
-
-    The purpose of this loss is to encourage the model to avoid cycles,
-    and prevent non-padding vertices from transitioning to padding vertices,
-    until the final non-padding vertex.
-
-    Args:
-        transition_matrix (torch.Tensor): The transition matrix.
-        vertex_lens (torch.Tensor): The lengths of the vertices.
-
-    Returns:
-        torch.Tensor: The transition loss.
-    """
-    mask = special_masking(transition_matrix, vertex_lens)
-    return torch.exp(transition_matrix).masked_select(mask != 0).sum()
-
 def dag_loss(targets, transition_matrix, emission_probs, target_lens, vertex_lens):
     """
     Calculates the directed acyclic graph (DAG) loss given the targets, transition matrix, and emission probabilities.
@@ -82,4 +64,4 @@ def dag_loss(targets, transition_matrix, emission_probs, target_lens, vertex_len
     """
     dp = dag_loss_raw(targets, transition_matrix, emission_probs)
     values = process_dp(dp, target_lens, vertex_lens)
-    return -torch.sum(values) + transition_loss(transition_matrix, vertex_lens)
+    return -torch.sum(values)
