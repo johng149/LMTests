@@ -14,7 +14,7 @@ def acyclic_mask(transition_matrix):
         torch.Tensor: The acyclic mask of shape (vertices, vertices).
     """
     batch_size, vertices, _ = transition_matrix.shape
-    mask = torch.tril(torch.ones((vertices, vertices)))
+    mask = torch.tril(torch.ones((vertices, vertices))).to(transition_matrix.device)
     return mask
 
 def padding_transition_mask(transition_matrix, vertex_lens):
@@ -31,7 +31,7 @@ def padding_transition_mask(transition_matrix, vertex_lens):
         torch.Tensor: The padding transition mask of shape (batch_size, vertices, vertices).
     """
     batch_size, vertices, _ = transition_matrix.shape
-    vertex_lens_mask = torch.arange(vertices).repeat(len(vertex_lens), 1) < vertex_lens.unsqueeze(-1)
+    vertex_lens_mask = torch.arange(vertices).to(transition_matrix.device).repeat(len(vertex_lens), 1) < vertex_lens.unsqueeze(-1)
     mask = torch.ones_like(transition_matrix)
     mask.transpose(1,2)[vertex_lens_mask] = 0
     return mask
