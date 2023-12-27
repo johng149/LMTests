@@ -29,6 +29,7 @@ class OutputDAG(nn.Module):
         q, k = self.attn(x).split(self.embed_dim, dim=-1)
         q = q.reshape(batch_size, -1, self.num_heads, self.cs)
         k = k.reshape(batch_size, -1, self.num_heads, self.cs)
+        # https://github.com/thu-coai/DA-Transformer/blob/245a90fe1397ba0dcaac04317bc327497c76cd9c/fs_plugins/models/glat_decomposed_with_link.py#L385
         attn_scores = torch.einsum("bicf,bjcf->bijc", q, k) / (self.cs ** 0.5)
         attn_scores = attn_scores.masked_fill(~m.unsqueeze(-1), float("-inf"))
         attn_scores = torch.log_softmax(attn_scores, dim=2)
