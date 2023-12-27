@@ -1,6 +1,7 @@
 import torch
 from utils.vector_gather import vector_gather
 from utils.fix_probs import special_masking
+from utils.logsumexp import logsumexp_infsafe as logsumexp
 
 def dag_loss_raw(targets, transition_matrix, emission_probs):
     """
@@ -27,8 +28,7 @@ def dag_loss_raw(targets, transition_matrix, emission_probs):
     emission_probs = emission_probs.transpose(1, 2)
     dp = dp.to(transition_matrix.device)
     for i in range(1, m):
-        dp[:, i-1, :i-1] = -float('inf')
-        dp[:, i, :] = vector_gather(emission_probs, targets[:, i]) + (torch.logsumexp(dp[:, i-1, :].unsqueeze(1).transpose(1, 2) + transition_matrix, dim=1))
+        dp[:, i, :] = vector_gather(emission_probs, targets[:, i]) + (logsumexp(dp[:, i-1, :].unsqueeze(1).transpose(1, 2) + transition_matrix, dim=1))
     return dp
 
 def process_dp(dp, target_lens, vertex_lens):
