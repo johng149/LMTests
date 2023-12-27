@@ -27,7 +27,14 @@ def dag_loss_raw(targets, transition_matrix, emission_probs):
     emission_probs = emission_probs.transpose(1, 2)
     dp = dp.to(transition_matrix.device)
     for i in range(1, m):
-        dp[:, i, :] = vector_gather(emission_probs, targets[:, i]) + (logsumexp(dp[:, i-1, :].unsqueeze(1).transpose(1, 2) + transition_matrix, dim=1))
+        t1 = vector_gather(emission_probs, targets[:, i])
+        t2 = (logsumexp(dp[:, i-1, :].unsqueeze(1).transpose(1, 2) + transition_matrix, dim=1))
+        t3 = t1 + t2
+        print(t1.shape)
+        print(t2.shape)
+        print(t3.shape)
+        print(dp[:, i, :].shape)
+        dp[:, i, :] = t3
     return dp
 
 def process_dp(dp, target_lens, vertex_lens):

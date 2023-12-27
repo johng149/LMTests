@@ -1,4 +1,5 @@
 import torch
+from typing import Union
 
 def acyclic_mask(transition_matrix):
     """
@@ -13,6 +14,20 @@ def acyclic_mask(transition_matrix):
     """
     batch_size, vertices, _ = transition_matrix.shape
     mask = torch.tril(torch.ones((vertices, vertices))).to(transition_matrix.device)
+    return mask
+
+def acyclic_mask2(vertices, device):
+    """
+    Generates a mask that, when applied to the transition matrix, ensures that
+    vertex i can only transition to vertices j where j > i.
+
+    Args:
+        transition_matrix (torch.Tensor): The transition matrix of shape (batch_size, vertices, vertices).
+
+    Returns:
+        torch.Tensor: The acyclic mask of shape (vertices, vertices).
+    """
+    mask = torch.tril(torch.ones((vertices, vertices))).to(device)
     return mask
 
 def padding_transition_mask(transition_matrix, vertex_lens):
@@ -34,6 +49,24 @@ def padding_transition_mask(transition_matrix, vertex_lens):
     mask.transpose(1,2)[vertex_lens_mask] = 0
     return mask
 
+def padding_transition_mask2(batch_size, vertices, vertex_lens, device):
+    """
+    Generates a mask that, when applied to the transition matrix, prevents vertices
+    from transitioning to padding vertices. It is assumed that the padding vertices
+    are at the end of the sequence.
+
+    Args:
+        transition_matrix (torch.Tensor): The transition matrix of shape (batch_size, vertices, vertices).
+        vertex_lens (torch.Tensor): A tensor of shape (batch_size,) that describes the number of non-padding vertices for each batch.
+
+    Returns:
+        torch.Tensor: The padding transition mask of shape (batch_size, vertices, vertices).
+    """
+    vertex_lens_mask = torch.arange(vertices).to(device).repeat(len(vertex_lens), 1) < vertex_lens.unsqueeze(-1)
+    mask = torch.ones((batch_size, vertices, vertices), device=device)
+    mask.transpose(1,2)[vertex_lens_mask] = 0
+    return mask
+
 def masking(transition_matrix, vertex_lens):
     """
     Creates masking to the transition matrix based on acyclic and padding masks.
@@ -48,6 +81,84 @@ def masking(transition_matrix, vertex_lens):
     acyclic = acyclic_mask(transition_matrix)
     padding = padding_transition_mask(transition_matrix, vertex_lens)
     return padding + acyclic
+
+def masking1(batch_size, vertices, vertex_lens, device):
+    """
+    Creates masking to the transition matrix based on acyclic and padding masks.
+
+    Args:
+        transition_matrix (torch.Tensor): The transition matrix of shape (batch_size, vertices, vertices).
+        vertex_lens (torch.Tensor): A tensor of shape (batch_size,) that describes the number of non-padding vertices for each batch.
+
+    Returns:
+        torch.Tensor: The masked transition matrix of shape (batch_size, vertices, vertices).
+    """
+    acyclic = acyclic_mask2(vertices, device)
+    padding = padding_transition_mask2(batch_size, vertices, vertex_lens, device)
+    return padding + acyclic
+
+def masking2(transition_matrix, vertex_lens):
+    """
+    Creates masking to the transition matrix based on acyclic and padding masks.
+    Unlike `masking`, this function sets elements that should not be masked to
+    True
+
+    Args:
+        transition_matrix (torch.Tensor): The transition matrix of shape (batch_size, vertices, vertices).
+        vertex_lens (torch.Tensor): A tensor of shape (batch_size,) that describes the number of non-padding vertices for each batch.
+
+    Returns:
+        torch.Tensor: The masked transition matrix of shape (batch_size, vertices, vertices).
+    """
+    m = masking(transition_matrix, vertex_lens)
+    return m == 0
+
+def masking3(transition_matrix, vertex_lens):
+    """
+    Creates masking to the transition matrix based on acyclic and padding masks.
+    Output is based on those for `masking2`, however, if there are any rows that
+    contain only False (that is, all elements are masked), then every element
+    in that row is set to True.
+
+    Also returns a row mask that describes which rows are all masked
+
+    Args:
+        transition_matrix (torch.Tensor): The transition matrix of shape (batch_size, vertices, vertices).
+        vertex_lens (torch.Tensor): A tensor of shape (batch_size,) that describes the number of non-padding vertices for each batch.
+
+    Returns:
+        torch.Tensor: The masked transition matrix of shape (batch_size, vertices, vertices).
+        torch.Tensor: The row mask of shape (batch_size, vertices, 1).
+    """
+    m = masking2(transition_matrix, vertex_lens)
+    r = m.sum(dim=2, keepdim=True) == 0
+    return m.masked_fill(r, True), r
+
+def masking4(
+        batch_size: int, 
+        vertices: int, 
+        vertex_lens: torch.Tensor,
+        device: Union[str, torch.device]
+    ):
+    """
+    Creates masking to the transition matrix based on acyclic and padding masks.
+    Output is based on those for `masking2`, however, if there are any rows that
+    contain only False (that is, all elements are masked), then every element
+    in that row is set to True.
+
+    Also returns a row mask that describes which rows are all masked
+
+    Args:
+        transition_matrix (torch.Tensor): The transition matrix of shape (batch_size, vertices, vertices).
+        vertex_lens (torch.Tensor): A tensor of shape (batch_size,) that describes the number of non-padding vertices for each batch.
+
+    Returns:
+        torch.Tensor: The masked transition matrix of shape (batch_size, vertices, vertices).
+        torch.Tensor: The row mask of shape (batch_size, vertices, 1).
+    """
+    m = masking1(batch_size, vertices, vertex_lens, device) == 0
+    r = m.sum(dim=2, keepdim=True) == 0
+    return m.masked_fill(r, True), r
 
 def fix_probs(logprobs, mask):
     """

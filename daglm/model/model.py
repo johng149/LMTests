@@ -71,9 +71,9 @@ class EncoderDecoderDAG(nn.Module):
         self.out_layers = nn.ModuleList()
         for _ in range(out_layers):
             self.out_layers.append(TransformerBlock(embedding_dim, num_heads, phm_factor))
-        self.output_dag = OutputDAG(embedding_dim, vocab_size, phm_factor, lm_head_factor)
+        self.output_dag = OutputDAG(embedding_dim, vocab_size, num_heads, phm_factor, lm_head_factor)
 
-    def forward(self, enc_tokens, dec_vertex_ids, enc_is_pad, dec_is_pad):
+    def forward(self, enc_tokens, dec_vertex_ids, enc_is_pad, dec_is_pad, vertex_lens):
         enc_self = self_attn_mask(enc_is_pad).unsqueeze(1)
         dec_self = self_attn_mask(dec_is_pad).unsqueeze(1)
         enc_kv = cross_attn_mask(enc_is_pad, dec_is_pad).unsqueeze(1)
@@ -102,4 +102,4 @@ class EncoderDecoderDAG(nn.Module):
         dec_x = self.final_cross(dec_x, enc_x, mask=enc_kv)
         for layer in self.out_layers:
             dec_x = layer(dec_x, mask=dec_self)
-        return self.output_dag(dec_x)
+        return self.output_dag(dec_x, vertex_lens)
