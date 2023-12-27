@@ -75,7 +75,13 @@ def dag_loss_raw(targets, transition_matrix, emission_probs):
     # so the vector gather works
     emission_probs = emission_probs.transpose(1, 2)
     dp = dp.to(transition_matrix.device)
+    print(f"Transition matrix shape: {transition_matrix.shape}")
     for i in range(1, m):
+        t1 = vector_gather(emission_probs, targets[:, i])
+        t2 = (torch.logsumexp(dp[:, i-1, :].unsqueeze(1).transpose(1, 2) + transition_matrix, dim=1))
+        print(f"Token prob shape: {t1.shape}")
+        print(f"Transition prob shape: {t2.shape}")
+        print(f"DP slice shape: {dp[:, i, :].shape}")
         dp[:, i, :] = vector_gather(emission_probs, targets[:, i]) + (torch.logsumexp(dp[:, i-1, :].unsqueeze(1).transpose(1, 2) + transition_matrix, dim=1))
     return dp
 
