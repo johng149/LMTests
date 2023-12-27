@@ -1,6 +1,5 @@
 import torch
 from utils.vector_gather import vector_gather
-from utils.fix_probs import special_masking
 from utils.logsumexp import logsumexp_infsafe as logsumexp
 
 def dag_loss_raw(targets, transition_matrix, emission_probs):
