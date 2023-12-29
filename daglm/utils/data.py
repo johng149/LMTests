@@ -20,6 +20,32 @@ class TranslateDataset(Dataset):
     def __getitem__(self, idx):
         return self.ens[idx], self.zhs[idx]
     
+class TranslateDatasetMultiple(Dataset):
+    # same as translate dataset but can specify multiple data files
+
+    def __init__(self, data_dir, data_files):
+        self.data_dir = data_dir
+        self.data_files = data_files
+        self.load_data()
+
+    def load_data(self):
+        ens = []
+        zhs = []
+        for data_file in self.data_files:
+            print(f"Loading data from {os.path.join(self.data_dir, data_file)}")
+            en, zh = torch.load(os.path.join(self.data_dir, data_file))
+            ens.append(en)
+            zhs.append(zh)
+        self.ens = torch.cat(ens, dim=0)
+        self.zhs = torch.cat(zhs, dim=0)
+        self.num_samples, _ = self.ens.shape # num_samples, seq_len
+
+    def __len__(self):
+        return self.num_samples
+    
+    def __getitem__(self, idx):
+        return self.ens[idx], self.zhs[idx]
+    
 def collate_fn(batch, pad_idx=65000):
     """
     Collate function for the TranslateDataset.
