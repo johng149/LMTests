@@ -18,9 +18,11 @@ class OutputDAG(nn.Module):
         self.attn = phm(phm_factor, embed_dim, embed_dim * 2)
         self.gate = phm(phm_factor, embed_dim, self.num_heads)
         self.lm_head = phm(lm_head_factor, embed_dim, vocab_size)
+        self.norm = nn.LayerNorm(embed_dim)
 
     def forward(self, x, vertex_lens):
         batch_size, num_vertices, embed_dim = x.shape
+        x = self.norm(x)
         m, r = masking(batch_size, num_vertices, vertex_lens, x.device)
         
         g = self.gate(x)
