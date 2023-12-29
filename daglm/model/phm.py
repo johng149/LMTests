@@ -68,7 +68,7 @@ def phm(factor, in_dim, out_dim):
     Create a PHM layer with the given factor, in_dim, and out_dim
     if it is doable and worth it, otherwise create a linear layer
     """
-    if doable(factor, in_dim, out_dim) and is_worth_it(factor, in_dim, out_dim):
+    if factor > 0 and doable(factor, in_dim, out_dim) and is_worth_it(factor, in_dim, out_dim):
         return KroneckerLinear(factor, in_dim, out_dim)
     else:
         return torch.nn.Linear(in_dim, out_dim)
