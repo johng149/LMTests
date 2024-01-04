@@ -64,5 +64,5 @@ def dag_loss(targets, transition_matrix, emission_probs, target_lens, vertex_len
     """
     dp = dag_loss_raw(targets, transition_matrix, emission_probs)
     values = process_dp(dp, target_lens, vertex_lens)
-    values = values / target_lens
+    values = values / target_lens.unsqueeze(-1)
     return -torch.mean(values)
