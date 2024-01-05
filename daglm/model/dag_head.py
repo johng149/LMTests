@@ -36,7 +36,15 @@ class OutputDAG(nn.Module):
         attn_scores = attn_scores.masked_fill(~m.unsqueeze(-1), float("-inf"))
         attn_scores = torch.log_softmax(attn_scores, dim=2)
         attn_scores = attn_scores.masked_fill(r.unsqueeze(-1), float("-inf"))
+
+        # you might worry that performing a logsumexp might cause the
+        # transition_matrix to contain values that map to probability
+        # greater than 1 in linear space, however, experimentally this
+        # additional g term seems to prevent that from happening
+        # (no idea why though)
         transition_matrix = logsumexp(attn_scores + g.unsqueeze(2), dim=-1).squeeze(-1)
+
+
 
         vocab_log_probs = torch.log_softmax(self.lm_head(x), dim=-1)
         return transition_matrix, vocab_log_probs
